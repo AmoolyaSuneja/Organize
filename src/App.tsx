@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
 import clsx from 'classnames'
 import { DesignBoard, type SuggestionBox } from './components/DesignBoard'
+import { SuggestionsPanel } from './components/SuggestionsPanel'
 
 function App() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -49,7 +50,7 @@ function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 gap-10 items-center">
+        <div className="grid md:grid-cols-2 gap-10 items-start">
           <div>
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
@@ -139,6 +140,18 @@ function App() {
                 )}
               </AnimatePresence>
             </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.05 }}
+          >
+            <SuggestionsPanel
+              disabled={!imageUrl}
+              onApply={(boxes) => setSuggestions(boxes)}
+              onClear={() => setSuggestions([])}
+            />
           </motion.div>
         </div>
       </main>
