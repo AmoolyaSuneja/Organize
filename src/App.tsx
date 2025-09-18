@@ -1,16 +1,20 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
 import clsx from 'classnames'
 import { DesignBoard, type SuggestionBox } from './components/DesignBoard'
 import { SuggestionsPanel } from './components/SuggestionsPanel'
 import { FiltersPanel, type FiltersState } from './components/FiltersPanel'
+import { exportNodeAsPng, exportNodeToBlob, shareImage } from './lib/export'
+import { saveAs } from 'file-saver'
 
 function App() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<SuggestionBox[]>([])
   const [showGrid, setShowGrid] = useState(true)
   const [filters, setFilters] = useState<FiltersState>({ roomType: 'room', goals: [], style: 'minimal', density: 50 })
+  const boardCardRef = useRef<HTMLDivElement | null>(null)
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
@@ -20,6 +24,11 @@ function App() {
       if (prev) URL.revokeObjectURL(prev)
       return url
     })
+    const reader = new FileReader()
+    reader.onload = () => {
+      setImageDataUrl(typeof reader.result === 'string' ? reader.result : null)
+    }
+    reader.readAsDataURL(file)
   }, [])
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
@@ -80,8 +89,9 @@ function App() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6 }}
             className="rounded-2xl border border-yellow-200 bg-white shadow-sm p-6"
+            ref={boardCardRef}
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4" data-noexport="true">
               <div className="text-sm text-slate-600">Board</div>
               <div className="flex items-center gap-2">
                 <button
@@ -109,6 +119,43 @@ function App() {
                   onClick={() => setSuggestions([])}
                 >
                   Clear
+                </button>
+                <button
+                  className="text-sm px-3 py-1.5 rounded-md border border-yellow-300 hover:bg-brand-50"
+                  onClick={() => {
+                    if (!imageDataUrl) return
+                    const payload = {
+                      imageDataUrl,
+                      suggestions,
+                      filters,
+                      savedAt: Date.now(),
+                    }
+                    localStorage.setItem('roomorganizer:design', JSON.stringify(payload))
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  className="text-sm px-3 py-1.5 rounded-md border border-yellow-300 hover:bg-brand-50"
+                  onClick={async () => {
+                    if (!boardCardRef.current) return
+                    await exportNodeAsPng(boardCardRef.current, 'design.png')
+                  }}
+                >
+                  Export PNG
+                </button>
+                <button
+                  className="text-sm px-3 py-1.5 rounded-md bg-amber-500 text-white hover:bg-amber-600"
+                  onClick={async () => {
+                    if (!boardCardRef.current) return
+                    const blob = await exportNodeToBlob(boardCardRef.current)
+                    const shared = await shareImage(blob)
+                    if (!shared) {
+                      saveAs(blob, 'design.png')
+                    }
+                  }}
+                >
+                  Share
                 </button>
               </div>
             </div>
