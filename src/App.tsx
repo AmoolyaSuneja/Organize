@@ -1,6 +1,38 @@
-import { motion } from 'framer-motion'
+import { useCallback, useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useDropzone } from 'react-dropzone'
+import clsx from 'classnames'
 
 function App() {
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    setImageUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return url
+    })
+  }, [])
+
+  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
+    accept: { 'image/*': [] },
+    maxFiles: 1,
+    multiple: false,
+    onDrop
+  })
+
+  const dropClasses = useMemo(() => clsx(
+    'aspect-video grid place-items-center rounded-xl border-2 border-dashed transition-all',
+    'bg-brand-50/60',
+    {
+      'border-yellow-400 shadow-[0_0_0_4px_rgba(245,158,11,0.15)]': isDragActive,
+      'border-red-400': isDragReject,
+      'border-yellow-300': !isDragActive && !isDragReject,
+    }
+  ), [isDragActive, isDragReject])
+
   return (
     <div className="min-h-screen app-gradient">
       <header className="sticky top-0 z-10 backdrop-blur border-b border-yellow-200/50 bg-white/70">
@@ -43,8 +75,34 @@ function App() {
             transition={{ duration: 0.6 }}
             className="rounded-2xl border border-yellow-200 bg-white shadow-sm p-6"
           >
-            <div id="upload" className="aspect-video grid place-items-center rounded-xl border border-dashed border-yellow-300 bg-brand-50/60">
-              <p className="text-slate-600">Upload area will go here</p>
+            <div id="upload" {...getRootProps({ className: dropClasses })}>
+              <input {...getInputProps()} />
+              <AnimatePresence initial={false}>
+                {!imageUrl && (
+                  <motion.div
+                    key="placeholder"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center px-6"
+                  >
+                    <p className="text-slate-700 font-medium">Drag & drop an image here, or click to browse</p>
+                    <p className="text-slate-500 text-sm mt-2">JPG, PNG, or WebP. Max 1 file.</p>
+                  </motion.div>
+                )}
+
+                {imageUrl && (
+                  <motion.div
+                    key="preview"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="relative w-full h-full overflow-hidden rounded-lg"
+                  >
+                    <img src={imageUrl} alt="Uploaded" className="w-full h-full object-contain" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
         </div>
