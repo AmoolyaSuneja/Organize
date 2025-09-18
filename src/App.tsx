@@ -2,9 +2,12 @@ import { useCallback, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
 import clsx from 'classnames'
+import { DesignBoard, type SuggestionBox } from './components/DesignBoard'
 
 function App() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<SuggestionBox[]>([])
+  const [showGrid, setShowGrid] = useState(true)
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
@@ -75,6 +78,38 @@ function App() {
             transition={{ duration: 0.6 }}
             className="rounded-2xl border border-yellow-200 bg-white shadow-sm p-6"
           >
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm text-slate-600">Board</div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="text-sm px-3 py-1.5 rounded-md border border-yellow-300 hover:bg-brand-50"
+                  onClick={() => setShowGrid(v => !v)}
+                >
+                  {showGrid ? 'Hide grid' : 'Show grid'}
+                </button>
+                <button
+                  className="text-sm px-3 py-1.5 rounded-md bg-brand-400 text-white hover:bg-brand-500"
+                  onClick={() => {
+                    if (!imageUrl) return
+                    // naive demo suggestions
+                    setSuggestions([
+                      { id: 's1', xPct: 10, yPct: 20, wPct: 20, hPct: 30, label: 'Shelves' },
+                      { id: 's2', xPct: 55, yPct: 15, wPct: 30, hPct: 25, label: 'Storage Bins' },
+                      { id: 's3', xPct: 35, yPct: 55, wPct: 25, hPct: 30, label: 'Hanging Rack' },
+                    ])
+                  }}
+                >
+                  Generate suggestions
+                </button>
+                <button
+                  className="text-sm px-3 py-1.5 rounded-md border border-yellow-300 hover:bg-brand-50"
+                  onClick={() => setSuggestions([])}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
             <div id="upload" {...getRootProps({ className: dropClasses })}>
               <input {...getInputProps()} />
               <AnimatePresence initial={false}>
@@ -93,13 +128,13 @@ function App() {
 
                 {imageUrl && (
                   <motion.div
-                    key="preview"
+                    key="board"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="relative w-full h-full overflow-hidden rounded-lg"
                   >
-                    <img src={imageUrl} alt="Uploaded" className="w-full h-full object-contain" />
+                    <DesignBoard imageUrl={imageUrl} suggestions={suggestions} showGrid={showGrid} />
                   </motion.div>
                 )}
               </AnimatePresence>
