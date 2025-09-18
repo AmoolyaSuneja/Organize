@@ -4,11 +4,13 @@ import { useDropzone } from 'react-dropzone'
 import clsx from 'classnames'
 import { DesignBoard, type SuggestionBox } from './components/DesignBoard'
 import { SuggestionsPanel } from './components/SuggestionsPanel'
+import { FiltersPanel, type FiltersState } from './components/FiltersPanel'
 
 function App() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<SuggestionBox[]>([])
   const [showGrid, setShowGrid] = useState(true)
+  const [filters, setFilters] = useState<FiltersState>({ roomType: 'room', goals: [], style: 'minimal', density: 50 })
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
@@ -50,7 +52,7 @@ function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 gap-10 items-start">
+        <div className="grid md:grid-cols-[1fr_320px] gap-10 items-start">
           <div>
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
@@ -147,11 +149,22 @@ function App() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.05 }}
           >
-            <SuggestionsPanel
-              disabled={!imageUrl}
-              onApply={(boxes) => setSuggestions(boxes)}
-              onClear={() => setSuggestions([])}
-            />
+            <div className="grid gap-4">
+              <FiltersPanel value={filters} onChange={setFilters} disabled={!imageUrl} />
+              <SuggestionsPanel
+                disabled={!imageUrl}
+                onApply={(boxes) => {
+                  // simple density modifier: scale widths/heights by density factor
+                  const factor = 0.7 + (filters.density / 100) * 0.6 // 0.7..1.3
+                  setSuggestions(boxes.map(b => ({
+                    ...b,
+                    wPct: Math.min(90, b.wPct * factor),
+                    hPct: Math.min(90, b.hPct * factor),
+                  })))
+                }}
+                onClear={() => setSuggestions([])}
+              />
+            </div>
           </motion.div>
         </div>
       </main>
