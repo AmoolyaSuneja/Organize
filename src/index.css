@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #FFFAEB;
+  --color-brand-100: #FEF3C7;
+  --color-brand-200: #FDE68A;
+  --color-brand-300: #FCD34D;
+  --color-brand-400: #F59E0B;
+  --color-brand-500: #D97706;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-white text-slate-900 font-sans antialiased;
+}
+
+.app-gradient {
+  background-image: radial-gradient(ellipse at top, theme(colors.brand.50), transparent 50%),
+    radial-gradient(ellipse at bottom right, theme(colors.brand.100), transparent 40%);
+}
