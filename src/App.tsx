@@ -1,52 +1,50 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useDropzone } from 'react-dropzone'
-import clsx from 'classnames'
-import { DesignBoard, type SuggestionBox } from './components/DesignBoard'
-import { SuggestionsPanel } from './components/SuggestionsPanel'
+import { useCallback, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import { FiltersPanel, type FiltersState } from './components/FiltersPanel'
+import { FurnitureLibrary } from './components/FurnitureLibrary'
+import { InteractiveCanvas, type PlacedFurniture } from './components/InteractiveCanvas'
 import { exportNodeAsPng, exportNodeToBlob, shareImage } from './lib/export'
 import { saveAs } from 'file-saver'
 
 function App() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
-  const [suggestions, setSuggestions] = useState<SuggestionBox[]>([])
+  const [placedFurniture, setPlacedFurniture] = useState<PlacedFurniture[]>([])
   const [showGrid, setShowGrid] = useState(true)
   const [filters, setFilters] = useState<FiltersState>({ roomType: 'room', goals: [], style: 'minimal', density: 50 })
   const boardCardRef = useRef<HTMLDivElement | null>(null)
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0]
-    if (!file) return
-    const url = URL.createObjectURL(file)
+  const handleImageUpload = useCallback((url: string) => {
     setImageUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return url
     })
-    const reader = new FileReader()
-    reader.onload = () => {
-      setImageDataUrl(typeof reader.result === 'string' ? reader.result : null)
+    // Convert to data URL for saving
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.drawImage(img, 0, 0)
+        setImageDataUrl(canvas.toDataURL())
+      }
     }
-    reader.readAsDataURL(file)
+    img.src = url
   }, [])
 
-  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
-    accept: { 'image/*': [] },
-    maxFiles: 1,
-    multiple: false,
-    onDrop
-  })
+  const handleFurnitureAdd = useCallback((furniture: PlacedFurniture) => {
+    setPlacedFurniture(prev => [...prev, furniture])
+  }, [])
 
-  const dropClasses = useMemo(() => clsx(
-    'aspect-video grid place-items-center rounded-xl border-2 border-dashed transition-all',
-    'bg-brand-50/60',
-    {
-      'border-yellow-400 shadow-[0_0_0_4px_rgba(245,158,11,0.15)]': isDragActive,
-      'border-red-400': isDragReject,
-      'border-yellow-300': !isDragActive && !isDragReject,
-    }
-  ), [isDragActive, isDragReject])
+  const handleFurnitureUpdate = useCallback((id: string, updates: Partial<PlacedFurniture>) => {
+    setPlacedFurniture(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f))
+  }, [])
+
+  const handleFurnitureRemove = useCallback((id: string) => {
+    setPlacedFurniture(prev => prev.filter(f => f.id !== id))
+  }, [])
 
   return (
     <div className="min-h-screen app-gradient">
@@ -60,162 +58,140 @@ function App() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-[1fr_320px] gap-10 items-start">
-          <div>
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Hero Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-12"
+        >
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
+            Organize your space with a single image
+          </h1>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Upload a photo of your room, closet, or kitchen. Get smart arrangement suggestions, apply filters, then save and share your design.
+          </p>
+        </motion.div>
+
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-4 gap-6">
+          {/* Canvas Area - Takes up 3/4 of the space */}
+          <div className="lg:col-span-3">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
-              className="text-4xl md:text-5xl font-bold tracking-tight"
+              className="rounded-2xl border border-yellow-200 bg-white shadow-lg p-6"
+              ref={boardCardRef}
             >
-              Organize your space with a single image
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.6 }}
-              className="mt-4 text-lg text-slate-600"
-            >
-              Upload a photo of your room, closet, or kitchen. Get smart arrangement suggestions, apply filters, then save and share your design.
-            </motion.p>
-            <div className="mt-8">
-              <a href="#upload" className="inline-flex items-center gap-2 rounded-lg bg-brand-400 text-white px-5 py-3 shadow-sm hover:bg-brand-500 transition-colors">Get Started</a>
-            </div>
+              {/* Canvas Header */}
+              <div className="flex items-center justify-between mb-6" data-noexport="true">
+                <h2 className="text-lg font-semibold text-slate-800">Interactive Room Designer</h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    className="text-sm px-3 py-1.5 rounded-md border border-yellow-300 hover:bg-brand-50 transition-colors"
+                    onClick={() => setShowGrid(v => !v)}
+                  >
+                    {showGrid ? 'Hide grid' : 'Show grid'}
+                  </button>
+                  <button
+                    className="text-sm px-3 py-1.5 rounded-md border border-yellow-300 hover:bg-brand-50 transition-colors"
+                    onClick={() => setPlacedFurniture([])}
+                  >
+                    Clear all
+                  </button>
+                </div>
+              </div>
+
+              {/* Interactive Canvas */}
+              <InteractiveCanvas
+                imageUrl={imageUrl}
+                onImageUpload={handleImageUpload}
+                placedFurniture={placedFurniture}
+                onFurnitureAdd={handleFurnitureAdd}
+                onFurnitureUpdate={handleFurnitureUpdate}
+                onFurnitureRemove={handleFurnitureRemove}
+                showGrid={showGrid}
+              />
+
+              {/* Action Buttons */}
+              {imageUrl && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex items-center justify-center gap-3 mt-6 pt-6 border-t border-yellow-100"
+                  data-noexport="true"
+                >
+                  <button
+                    className="px-4 py-2 rounded-lg border border-yellow-300 hover:bg-brand-50 transition-colors flex items-center gap-2"
+                    onClick={() => {
+                      if (!imageDataUrl) return
+                      const payload = {
+                        imageDataUrl,
+                        placedFurniture,
+                        filters,
+                        savedAt: Date.now(),
+                      }
+                      localStorage.setItem('roomorganizer:design', JSON.stringify(payload))
+                    }}
+                  >
+                    💾 Save
+                  </button>
+                  <button
+                    className="px-4 py-2 rounded-lg border border-yellow-300 hover:bg-brand-50 transition-colors flex items-center gap-2"
+                    onClick={async () => {
+                      if (!boardCardRef.current) return
+                      await exportNodeAsPng(boardCardRef.current, 'design.png')
+                    }}
+                  >
+                    📥 Export PNG
+                  </button>
+                  <button
+                    className="px-4 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors flex items-center gap-2"
+                    onClick={async () => {
+                      if (!boardCardRef.current) return
+                      const blob = await exportNodeToBlob(boardCardRef.current)
+                      const shared = await shareImage(blob)
+                      if (!shared) {
+                        saveAs(blob, 'design.png')
+                      }
+                    }}
+                  >
+                    📤 Share
+        </button>
+                </motion.div>
+              )}
+            </motion.div>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-            className="rounded-2xl border border-yellow-200 bg-white shadow-sm p-6"
-            ref={boardCardRef}
-          >
-            <div className="flex items-center justify-between mb-4" data-noexport="true">
-              <div className="text-sm text-slate-600">Board</div>
-              <div className="flex items-center gap-2">
-                <button
-                  className="text-sm px-3 py-1.5 rounded-md border border-yellow-300 hover:bg-brand-50"
-                  onClick={() => setShowGrid(v => !v)}
-                >
-                  {showGrid ? 'Hide grid' : 'Show grid'}
-                </button>
-                <button
-                  className="text-sm px-3 py-1.5 rounded-md bg-brand-400 text-white hover:bg-brand-500"
-                  onClick={() => {
-                    if (!imageUrl) return
-                    // naive demo suggestions
-                    setSuggestions([
-                      { id: 's1', xPct: 10, yPct: 20, wPct: 20, hPct: 30, label: 'Shelves' },
-                      { id: 's2', xPct: 55, yPct: 15, wPct: 30, hPct: 25, label: 'Storage Bins' },
-                      { id: 's3', xPct: 35, yPct: 55, wPct: 25, hPct: 30, label: 'Hanging Rack' },
-                    ])
-                  }}
-                >
-                  Generate suggestions
-                </button>
-                <button
-                  className="text-sm px-3 py-1.5 rounded-md border border-yellow-300 hover:bg-brand-50"
-                  onClick={() => setSuggestions([])}
-                >
-                  Clear
-                </button>
-                <button
-                  className="text-sm px-3 py-1.5 rounded-md border border-yellow-300 hover:bg-brand-50"
-                  onClick={() => {
-                    if (!imageDataUrl) return
-                    const payload = {
-                      imageDataUrl,
-                      suggestions,
-                      filters,
-                      savedAt: Date.now(),
-                    }
-                    localStorage.setItem('roomorganizer:design', JSON.stringify(payload))
-                  }}
-                >
-                  Save
-                </button>
-                <button
-                  className="text-sm px-3 py-1.5 rounded-md border border-yellow-300 hover:bg-brand-50"
-                  onClick={async () => {
-                    if (!boardCardRef.current) return
-                    await exportNodeAsPng(boardCardRef.current, 'design.png')
-                  }}
-                >
-                  Export PNG
-                </button>
-                <button
-                  className="text-sm px-3 py-1.5 rounded-md bg-amber-500 text-white hover:bg-amber-600"
-                  onClick={async () => {
-                    if (!boardCardRef.current) return
-                    const blob = await exportNodeToBlob(boardCardRef.current)
-                    const shared = await shareImage(blob)
-                    if (!shared) {
-                      saveAs(blob, 'design.png')
-                    }
-                  }}
-                >
-                  Share
-                </button>
-              </div>
+          {/* Sidebar - Takes up 1/4 of the space */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-6 space-y-6">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
+                <FiltersPanel value={filters} onChange={setFilters} disabled={!imageUrl} />
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <FurnitureLibrary
+                  onDragStart={() => {}} // Handled by the library itself
+                  disabled={!imageUrl}
+                />
+              </motion.div>
             </div>
-
-            <div id="upload" {...getRootProps({ className: dropClasses })}>
-              <input {...getInputProps()} />
-              <AnimatePresence initial={false}>
-                {!imageUrl && (
-                  <motion.div
-                    key="placeholder"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-center px-6"
-                  >
-                    <p className="text-slate-700 font-medium">Drag & drop an image here, or click to browse</p>
-                    <p className="text-slate-500 text-sm mt-2">JPG, PNG, or WebP. Max 1 file.</p>
-                  </motion.div>
-                )}
-
-                {imageUrl && (
-                  <motion.div
-                    key="board"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="relative w-full h-full overflow-hidden rounded-lg"
-                  >
-                    <DesignBoard imageUrl={imageUrl} suggestions={suggestions} showGrid={showGrid} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.05 }}
-          >
-            <div className="grid gap-4">
-              <FiltersPanel value={filters} onChange={setFilters} disabled={!imageUrl} />
-              <SuggestionsPanel
-                disabled={!imageUrl}
-                onApply={(boxes) => {
-                  // simple density modifier: scale widths/heights by density factor
-                  const factor = 0.7 + (filters.density / 100) * 0.6 // 0.7..1.3
-                  setSuggestions(boxes.map(b => ({
-                    ...b,
-                    wPct: Math.min(90, b.wPct * factor),
-                    hPct: Math.min(90, b.hPct * factor),
-                  })))
-                }}
-                onClear={() => setSuggestions([])}
-              />
-            </div>
-          </motion.div>
+          </div>
         </div>
       </main>
-    </div>
+      </div>
   )
 }
 
