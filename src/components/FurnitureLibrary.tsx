@@ -68,22 +68,50 @@ export function FurnitureLibrary({ onDragStart, disabled }: FurnitureLibraryProp
                 {items.map(item => (
                   <motion.div
                     key={item.id}
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                     draggable={!disabled}
-                    onDragStart={() => onDragStart(item)}
+                    onDragStart={(e) => {
+                      onDragStart(item)
+                      // Create a custom drag image
+                      const dragImage = document.createElement('div')
+                      dragImage.innerHTML = `
+                        <div style="
+                          background: white;
+                          border: 2px solid #f59e0b;
+                          border-radius: 8px;
+                          padding: 8px;
+                          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                          font-size: 24px;
+                          text-align: center;
+                        ">
+                          ${item.emoji}
+                          <div style="font-size: 10px; color: #666; margin-top: 2px;">${item.name}</div>
+                        </div>
+                      `
+                      dragImage.style.position = 'absolute'
+                      dragImage.style.top = '-1000px'
+                      document.body.appendChild(dragImage)
+                      e.dataTransfer.setDragImage(dragImage, 50, 50)
+                      setTimeout(() => document.body.removeChild(dragImage), 0)
+                    }}
                     className={`
-                      flex items-center gap-2 p-2 rounded-lg border cursor-grab active:cursor-grabbing
+                      flex items-center gap-2 p-3 rounded-lg border cursor-grab active:cursor-grabbing transition-all
                       ${disabled 
                         ? 'opacity-50 cursor-not-allowed' 
-                        : 'border-yellow-200 hover:border-yellow-300 hover:bg-brand-50'
+                        : 'border-yellow-200 hover:border-yellow-300 hover:bg-brand-50 hover:shadow-md'
                       }
                     `}
                   >
-                    <span className="text-lg">{item.emoji}</span>
+                    <div className="w-8 h-8 bg-white rounded-md border border-yellow-200 flex items-center justify-center text-lg shadow-sm">
+                      {item.emoji}
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium truncate">{item.name}</div>
-                      <div className="text-xs text-slate-500">{item.width}×{item.height}</div>
+                      <div className="text-xs font-medium truncate text-slate-800">{item.name}</div>
+                      <div className="text-xs text-slate-500">{item.width}×{item.height}px</div>
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {item.category}
                     </div>
                   </motion.div>
                 ))}

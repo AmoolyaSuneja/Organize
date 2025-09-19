@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { FiltersPanel, type FiltersState } from './components/FiltersPanel'
-import { FurnitureLibrary, type FurnitureItem } from './components/FurnitureLibrary'
+import { FurnitureLibrary } from './components/FurnitureLibrary'
 import { InteractiveCanvas, type PlacedFurniture } from './components/InteractiveCanvas'
 import { LayoutSuggestions } from './components/LayoutSuggestions'
 import { exportNodeAsPng, exportNodeToBlob, shareImage } from './lib/export'
@@ -50,8 +50,6 @@ function App() {
   const handleApplySuggestion = useCallback((furniture: PlacedFurniture[]) => {
     setPlacedFurniture(furniture)
   }, [])
-
-  const [_draggedFurnitureItem, setDraggedFurnitureItem] = useState<FurnitureItem | null>(null)
 
   return (
     <div className="min-h-screen app-gradient">
@@ -109,7 +107,7 @@ function App() {
                     Clear all
                   </button>
                 </div>
-      </div>
+              </div>
 
               {/* Interactive Canvas */}
               <InteractiveCanvas
@@ -120,7 +118,6 @@ function App() {
                 onFurnitureUpdate={handleFurnitureUpdate}
                 onFurnitureRemove={handleFurnitureRemove}
                 showGrid={showGrid}
-                onDragStart={setDraggedFurnitureItem}
               />
 
               {/* Action Buttons */}
@@ -168,7 +165,7 @@ function App() {
                     }}
                   >
                     📤 Share
-        </button>
+                  </button>
                 </motion.div>
               )}
             </motion.div>
@@ -206,7 +203,7 @@ function App() {
                 transition={{ duration: 0.6, delay: 0.3 }}
               >
                 <FurnitureLibrary
-                  onDragStart={setDraggedFurnitureItem}
+                  onDragStart={() => {}} // Handled by the library itself
                   disabled={!imageUrl}
                 />
               </motion.div>
@@ -214,7 +211,7 @@ function App() {
           </div>
         </div>
       </main>
-      </div>
+    </div>
   )
 }
 
